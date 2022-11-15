@@ -10,80 +10,80 @@ import (
 
 type (
 	GORMModel interface {
-		ID() any
+		PrimaryKey() any
 	}
 	GenericCRUD[T GORMModel] struct {
 		logger *log.Logger
 		db     *gorm.DB
+		omit   []string
 	}
 )
 
 var (
 	MultipleResultsError = errors.New("multiple results found")
+	OmitByDefault        = []string{"CreatedAt", "UpdatedAt"}
 )
 
-func New[T GORMModel](db *gorm.DB) GenericCRUD[T] {
+func New[T GORMModel](db *gorm.DB, omit ...string) GenericCRUD[T] {
 	return GenericCRUD[T]{
 		logger: nil,
 		db:     db,
+		omit:   append(OmitByDefault, omit...),
 	}
 }
 
-func (g GenericCRUD[T]) Create(ctx context.Context, v T) (newV T, err error) {
-	newV = v
-	err = g.db.Debug().WithContext(ctx).Create(&newV).Error
-	return
+func (g GenericCRUD[T]) Create(ctx context.Context, v T) (*T, error) {
+	g.db.Omit()
+	err := g.db.Debug().WithContext(ctx).Omit(g.omit...).Create(&v).Error
+	return &v, err
 }
 
-func (g GenericCRUD[T]) GetOrCreate(ctx context.Context, v T) (newV T, err error) {
-	err = g.db.Debug().WithContext(ctx).Where(&v).FirstOrCreate(&newV).Error
-	return
+func (g GenericCRUD[T]) GetOrCreate(ctx context.Context, v T) (*T, error) {
+	err := g.db.Debug().WithContext(ctx).Omit(g.omit...).Where(&v).FirstOrCreate(&v).Error
+	return &v, err
 }
 
-func (g GenericCRUD[T]) GetByID(ctx context.Context, v T) (newV T, err error) {
-	err = g.db.Debug().WithContext(ctx).Take(&newV, v.ID()).Error
-	return
+func (g GenericCRUD[T]) GetByID(ctx context.Context, v T) (*T, error) {
+	err := g.db.Debug().WithContext(ctx).Take(&v, v.PrimaryKey()).Error
+	return &v, err
 }
 
-func (g GenericCRUD[T]) Query(ctx context.Context, v T) (newV []T, err error) {
-	err = g.db.Debug().WithContext(ctx).Where(&v).Find(&newV).Error
-	return
+func (g GenericCRUD[T]) Query(ctx context.Context, v T) ([]*T, error) {
+	var res []*T
+	err := g.db.Debug().WithContext(ctx).Omit(g.omit...).Where(&v).Find(&res).Error
+	return res, err
 }
 
-func (g GenericCRUD[T]) QueryOne(ctx context.Context, v T) (newV T, err error) {
-	var res []T
-	err = g.db.Debug().WithContext(ctx).Where(&v).Find(&res).Error
+func (g GenericCRUD[T]) QueryOne(ctx context.Context, v T) (*T, error) {
+	var res []*T
+	err := g.db.Debug().WithContext(ctx).Omit(g.omit...).Where(&v).Find(&res).Error
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			err = fmt.Errorf("db error: %w", err)
 		}
-		return *new(T), err
+		return nil, err
 	}
 	if len(res) == 0 {
-		return *new(T), gorm.ErrRecordNotFound
+		return nil, gorm.ErrRecordNotFound
 	}
 	if len(res) > 1 {
-		return *new(T), MultipleResultsError
+		return nil, MultipleResultsError
 	}
 	return res[0], nil
 }
 
-func (g GenericCRUD[T]) UpdateField(ctx context.Context, v T, column string, value any) (err error) {
-	err = g.db.Debug().WithContext(ctx).Model(&v).Update(column, value).Error
-	return
+func (g GenericCRUD[T]) UpdateField(ctx context.Context, v T, column string, value any) error {
+	return g.db.Debug().WithContext(ctx).Omit(g.omit...).Model(&v).Update(column, value).Error
 }
 
 func (g GenericCRUD[T]) Update(ctx context.Context, v T) (err error) {
-	err = g.db.Debug().WithContext(ctx).Updates(&v).Error
-	return
+	return g.db.Debug().WithContext(ctx).Omit(g.omit...).Updates(&v).Error
 }
 
-func (g GenericCRUD[T]) UpdateMap(ctx context.Context, v map[string]any) (err error) {
-	err = g.db.Debug().WithContext(ctx).Updates(&v).Error
-	return
+func (g GenericCRUD[T]) UpdateMap(ctx context.Context, v map[string]any) error {
+	return g.db.Debug().WithContext(ctx).Updates(&v).Error
 }
 
-func (g GenericCRUD[T]) Delete(ctx context.Context, v map[string]any) (err error) {
-	err = g.db.Debug().WithContext(ctx).Delete(&v).Error
-	return
+func (g GenericCRUD[T]) Delete(ctx context.Context, v T) error {
+	return g.db.Debug().WithContext(ctx).Delete(&v, v.PrimaryKey()).Error
 }

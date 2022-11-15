@@ -49,22 +49,22 @@ func (s *testSuite) TestCRUD() {
 		v, err := s.crud.Create(context.TODO(), User{Name: "test", Age: 11})
 		s.NoError(err)
 		s.T().Logf("%+v", v)
-		s.NotZero(v.ID())
-		user = v
+		s.NotZero(v.PrimaryKey())
+		user = *v
 	})
 	s.Run("get or create get", func() {
 		v, err := s.crud.GetOrCreate(context.TODO(), User{Name: "test", Age: 11})
 		s.NoError(err)
 		s.T().Logf("%+v", v)
-		s.NotZero(v.ID())
-		s.Equal(v.ID(), user.ID())
+		s.NotZero(v.PrimaryKey())
+		s.Equal(v.PrimaryKey(), user.PrimaryKey())
 	})
 	s.Run("get or create create", func() {
 		v, err := s.crud.GetOrCreate(context.TODO(), User{Name: "test2", Age: 12})
 		s.NoError(err)
 		s.T().Logf("%+v", v)
-		s.NotZero(v.ID())
-		s.NotEqual(v.ID(), user.ID())
+		s.NotZero(v.PrimaryKey())
+		s.NotEqual(v.PrimaryKey(), user.PrimaryKey())
 	})
 	s.Run("query", func() {
 		testCases := []struct {
@@ -159,6 +159,6 @@ type User struct {
 	Age  int
 }
 
-func (u User) ID() any {
+func (u User) PrimaryKey() any {
 	return u.Model.ID
 }

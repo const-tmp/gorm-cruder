@@ -32,14 +32,13 @@ func New[T GORMModel](db *gorm.DB, omit ...string) GenericCRUD[T] {
 	}
 }
 
-func (g GenericCRUD[T]) Create(ctx context.Context, v T) (*T, error) {
-	g.db.Omit()
-	err := g.db.Debug().WithContext(ctx).Omit(g.omit...).Create(&v).Error
+func (g GenericCRUD[T]) Create(ctx context.Context, v T, omit ...string) (*T, error) {
+	err := g.db.Debug().WithContext(ctx).Omit(append(g.omit, omit...)...).Create(&v).Error
 	return &v, err
 }
 
-func (g GenericCRUD[T]) GetOrCreate(ctx context.Context, v T) (*T, error) {
-	err := g.db.Debug().WithContext(ctx).Omit(g.omit...).Where(&v).FirstOrCreate(&v).Error
+func (g GenericCRUD[T]) GetOrCreate(ctx context.Context, v T, omit ...string) (*T, error) {
+	err := g.db.Debug().WithContext(ctx).Omit(append(g.omit, omit...)...).Where(&v).FirstOrCreate(&v).Error
 	return &v, err
 }
 
@@ -48,15 +47,15 @@ func (g GenericCRUD[T]) GetByID(ctx context.Context, v T) (*T, error) {
 	return &v, err
 }
 
-func (g GenericCRUD[T]) Query(ctx context.Context, v T) ([]*T, error) {
+func (g GenericCRUD[T]) Query(ctx context.Context, v T, omit ...string) ([]*T, error) {
 	var res []*T
-	err := g.db.Debug().WithContext(ctx).Omit(g.omit...).Where(&v).Find(&res).Error
+	err := g.db.Debug().WithContext(ctx).Omit(append(g.omit, omit...)...).Where(&v).Find(&res).Error
 	return res, err
 }
 
-func (g GenericCRUD[T]) QueryOne(ctx context.Context, v T) (*T, error) {
+func (g GenericCRUD[T]) QueryOne(ctx context.Context, v T, omit ...string) (*T, error) {
 	var res []*T
-	err := g.db.Debug().WithContext(ctx).Omit(g.omit...).Where(&v).Find(&res).Error
+	err := g.db.Debug().WithContext(ctx).Omit(append(g.omit, omit...)...).Where(&v).Find(&res).Error
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			err = fmt.Errorf("db error: %w", err)
@@ -76,8 +75,8 @@ func (g GenericCRUD[T]) UpdateField(ctx context.Context, v T, column string, val
 	return g.db.Debug().WithContext(ctx).Omit(g.omit...).Model(&v).Update(column, value).Error
 }
 
-func (g GenericCRUD[T]) Update(ctx context.Context, v T) (err error) {
-	return g.db.Debug().WithContext(ctx).Omit(g.omit...).Updates(&v).Error
+func (g GenericCRUD[T]) Update(ctx context.Context, v T, omit ...string) (err error) {
+	return g.db.Debug().WithContext(ctx).Omit(append(g.omit, omit...)...).Updates(&v).Error
 }
 
 func (g GenericCRUD[T]) UpdateMap(ctx context.Context, v map[string]any) error {

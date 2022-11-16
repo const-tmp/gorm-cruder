@@ -79,8 +79,8 @@ func (g GenericCRUD[T]) Update(ctx context.Context, v T, omit ...string) (err er
 	return g.db.Debug().WithContext(ctx).Omit(append(g.omit, omit...)...).Updates(&v).Error
 }
 
-func (g GenericCRUD[T]) UpdateMap(ctx context.Context, v map[string]any) error {
-	return g.db.Debug().WithContext(ctx).Updates(&v).Error
+func (g GenericCRUD[T]) UpdateMap(ctx context.Context, v T, m map[string]any) error {
+	return g.db.Debug().WithContext(ctx).Model(&v).Updates(m).Error
 }
 
 func (g GenericCRUD[T]) Delete(ctx context.Context, v T) error {

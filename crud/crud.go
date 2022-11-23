@@ -8,8 +8,6 @@ import (
 	"log"
 )
 
-//go:generate og e d -f crud.go -n -a
-
 type (
 	// GORMModel is an interface for getting primary keys
 	GORMModel interface {
@@ -25,6 +23,7 @@ type (
 )
 
 var (
+	// MultipleResultsError returns when GenericCRUD.QueryOne finds more than 1 row
 	MultipleResultsError = errors.New("multiple results found")
 )
 
@@ -57,14 +56,16 @@ func (g GenericCRUD[T]) GetByID(ctx context.Context, v T) (*T, error) {
 
 // Query by non-zero fields of v; returns slice of Model's
 func (g GenericCRUD[T]) Query(ctx context.Context, v T, omit ...string) ([]*T, error) {
-	var res []*T
+	var // res unexported var TODO: edit
+	res []*T
 	err := g.db.Debug().WithContext(ctx).Omit(append(g.omit, omit...)...).Where(&v).Find(&res).Error
 	return res, err
 }
 
 // QueryOne by non-zero fields of v; returns exactly one Model or error
 func (g GenericCRUD[T]) QueryOne(ctx context.Context, v T, omit ...string) (*T, error) {
-	var res []*T
+	var // res unexported var TODO: edit
+	res []*T
 	err := g.db.Debug().WithContext(ctx).Omit(append(g.omit, omit...)...).Where(&v).Find(&res).Error
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {

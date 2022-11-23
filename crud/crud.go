@@ -23,11 +23,11 @@ type (
 )
 
 var (
-	// MultipleResultsError returns when GenericCRUD.QueryOne finds more than 1 row
+	// MultipleResultsError is returned when GenericCRUD.QueryOne finds more than 1 row
 	MultipleResultsError = errors.New("multiple results found")
 )
 
-// New is constructor
+// New is a constructor
 func New[T GORMModel](db *gorm.DB, omit ...string) GenericCRUD[T] {
 	return GenericCRUD[T]{
 		logger: nil,

@@ -2,6 +2,7 @@ package crud
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/driver/postgres"
@@ -43,24 +44,31 @@ func (s *testSuite) SetupSuite() {
 	})
 }
 
+var (
+	a1 = sql.NullInt16{Int16: 11, Valid: true}
+	a2 = sql.NullInt16{Int16: 12, Valid: true}
+	a3 = sql.NullInt16{Int16: 111, Valid: true}
+	a4 = sql.NullInt16{Int16: 1111, Valid: true}
+)
+
 func (s *testSuite) TestCRUD() {
 	var user User
 	s.Run("create", func() {
-		v, err := s.crud.Create(context.TODO(), User{Name: "test", Age: 11})
+		v, err := s.crud.Create(context.TODO(), User{Name: "test", Age: a1})
 		s.NoError(err)
 		s.T().Logf("%+v", v)
 		s.NotZero(v.PrimaryKey())
 		user = *v
 	})
 	s.Run("get or create get", func() {
-		v, err := s.crud.GetOrCreate(context.TODO(), User{Name: "test", Age: 11})
+		v, err := s.crud.GetOrCreate(context.TODO(), User{Name: "test", Age: a1})
 		s.NoError(err)
 		s.T().Logf("%+v", v)
 		s.NotZero(v.PrimaryKey())
 		s.Equal(v.PrimaryKey(), user.PrimaryKey())
 	})
 	s.Run("get or create create", func() {
-		v, err := s.crud.GetOrCreate(context.TODO(), User{Name: "test2", Age: 12})
+		v, err := s.crud.GetOrCreate(context.TODO(), User{Name: "test2", Age: a2})
 		s.NoError(err)
 		s.T().Logf("%+v", v)
 		s.NotZero(v.PrimaryKey())
@@ -74,12 +82,12 @@ func (s *testSuite) TestCRUD() {
 			{User{}, 2},
 			{User{Name: "test"}, 1},
 			{User{Name: "test2"}, 1},
-			{User{Age: 11}, 1},
-			{User{Age: 12}, 1},
-			{User{Name: "test2", Age: 11}, 0},
-			{User{Name: "test2", Age: 12}, 1},
-			{User{Name: "test", Age: 12}, 0},
-			{User{Name: "test", Age: 11}, 1},
+			{User{Age: a1}, 1},
+			{User{Age: a2}, 1},
+			{User{Name: "test2", Age: a1}, 0},
+			{User{Name: "test2", Age: a2}, 1},
+			{User{Name: "test", Age: a2}, 0},
+			{User{Name: "test", Age: a1}, 1},
 		}
 		for _, tc := range testCases {
 			s.Run("query", func() {
@@ -97,12 +105,12 @@ func (s *testSuite) TestCRUD() {
 			{User{}, MultipleResultsError},
 			{User{Name: "test"}, nil},
 			{User{Name: "test2"}, nil},
-			{User{Age: 11}, nil},
-			{User{Age: 12}, nil},
-			{User{Name: "test2", Age: 11}, gorm.ErrRecordNotFound},
-			{User{Name: "test2", Age: 12}, nil},
-			{User{Name: "test", Age: 12}, gorm.ErrRecordNotFound},
-			{User{Name: "test", Age: 11}, nil},
+			{User{Age: a1}, nil},
+			{User{Age: a2}, nil},
+			{User{Name: "test2", Age: a1}, gorm.ErrRecordNotFound},
+			{User{Name: "test2", Age: a2}, nil},
+			{User{Name: "test", Age: a2}, gorm.ErrRecordNotFound},
+			{User{Name: "test", Age: a1}, nil},
 		}
 		for _, tc := range testCases {
 			s.Run("query", func() {
@@ -136,19 +144,38 @@ func (s *testSuite) TestCRUD() {
 		s.T().Logf("%+v", v)
 	})
 	s.Run("query", func() {
-		v, err := s.crud.QueryOne(context.TODO(), User{Age: 111})
+		v, err := s.crud.QueryOne(context.TODO(), User{Age: a3})
 		s.Require().NoError(err)
 		s.T().Logf("%+v", v)
 	})
 	s.Run("update", func() {
-		err := s.crud.Update(context.TODO(), User{Model: gorm.Model{ID: user.Model.ID}, Name: "test!!", Age: 1111})
+		err := s.crud.Update(context.TODO(), User{Model: gorm.Model{ID: user.Model.ID}, Name: "test!!", Age: a4})
 		s.Require().NoError(err)
 	})
 	s.Run("query", func() {
 		v, err := s.crud.QueryOne(context.TODO(), User{Model: gorm.Model{ID: user.Model.ID}})
 		s.Require().NoError(err)
 		s.T().Logf("%+v", v)
-		s.Require().Equal(1111, v.Age)
+		s.Require().Equal(a4, v.Age)
+		s.Require().Equal("test!!", v.Name)
+	})
+	s.Run("query map", func() {
+		v, err := s.crud.QueryMapOne(context.TODO(), map[string]any{
+			"id": user.ID,
+		})
+		s.Require().NoError(err)
+		s.T().Logf("%+v", v)
+		s.Require().Equal(a4, v.Age)
+		s.Require().Equal("test!!", v.Name)
+	})
+	s.Run("query map", func() {
+		v, err := s.crud.QueryMapOne(context.TODO(), map[string]any{
+			"id":  user.ID,
+			"age": 1111,
+		})
+		s.Require().NoError(err)
+		s.T().Logf("%+v", v)
+		s.Require().Equal(a4, v.Age)
 		s.Require().Equal("test!!", v.Name)
 	})
 }
@@ -156,7 +183,7 @@ func (s *testSuite) TestCRUD() {
 type User struct {
 	gorm.Model
 	Name string
-	Age  int
+	Age  sql.NullInt16
 }
 
 func (u User) PrimaryKey() any {

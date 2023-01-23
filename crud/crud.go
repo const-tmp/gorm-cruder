@@ -20,7 +20,35 @@ type (
 		db     *gorm.DB
 		omit   []string
 	}
+
+	OrderBy uint
+
+	Query struct {
+		Omit    []string
+		Preload []string
+		OrderBy map[string]OrderBy
+		Equal   map[string]any
+		Like    map[string]string
+		Between map[string]struct {
+			From, To any
+		}
+	}
 )
+
+const (
+	ASC OrderBy = 1 << iota
+	DESC
+)
+
+func (ob OrderBy) String() string {
+	if ob == ASC {
+		return "ASC"
+	}
+	if ob == DESC {
+		return "DESC"
+	}
+	panic("unknown OrderBy")
+}
 
 var (
 	// MultipleResultsError is returned when GenericCRUD.QueryOne finds more than 1 row
@@ -90,6 +118,50 @@ func (g GenericCRUD[T]) QueryMap(ctx context.Context, q map[string]any, omit ...
 // QueryMapOne by non-zero fields of v; returns exactly one Model or error
 func (g GenericCRUD[T]) QueryMapOne(ctx context.Context, q map[string]any, omit ...string) (*T, error) {
 	res, err := g.QueryMap(ctx, q, omit...)
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			err = fmt.Errorf("db error: %w", err)
+		}
+		return nil, err
+	}
+	if len(res) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	if len(res) > 1 {
+		return nil, MultipleResultsError
+	}
+	return res[0], nil
+}
+
+// SmartQuery by non-zero fields of v; returns slice of Model's
+func (g GenericCRUD[T]) SmartQuery(ctx context.Context, q Query) ([]*T, error) {
+	var (
+		res  []*T
+		err  error
+		stmt = g.db.Debug().WithContext(ctx).Omit(q.Omit...)
+	)
+	for _, s := range q.Preload {
+		stmt = stmt.Preload(s)
+	}
+	for k, v := range q.OrderBy {
+		stmt = stmt.Order(k + " " + v.String())
+	}
+	for k, v := range q.Like {
+		stmt = stmt.Where(k+" LIKE ?", fmt.Sprintf("%%%s%%", v))
+	}
+	for k, v := range q.Between {
+		stmt = stmt.Where(k+" BETWEEN ? AND ?", v.From, v.To)
+	}
+	for k, v := range q.Equal {
+		stmt = stmt.Where(k+" = ?", v)
+	}
+	err = stmt.Find(&res).Error
+	return res, err
+}
+
+// SmartQueryOne by non-zero fields of v; returns exactly one Model or error
+func (g GenericCRUD[T]) SmartQueryOne(ctx context.Context, q Query) (*T, error) {
+	res, err := g.SmartQuery(ctx, q)
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			err = fmt.Errorf("db error: %w", err)

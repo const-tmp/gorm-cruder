@@ -8,6 +8,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"testing"
+	"time"
 )
 
 type testSuite struct {
@@ -177,6 +178,70 @@ func (s *testSuite) TestCRUD() {
 		s.T().Logf("%+v", v)
 		s.Require().Equal(a4, v.Age)
 		s.Require().Equal("test!!", v.Name)
+	})
+	s.Run("smart query", func() {
+		v, err := s.crud.SmartQuery(context.TODO(), Query{OrderBy: map[string]OrderBy{"id": ASC}})
+		s.Require().NoError(err)
+		for i, u := range v {
+			s.T().Log(i, u)
+		}
+	})
+	s.Run("smart query", func() {
+		v, err := s.crud.SmartQuery(context.TODO(), Query{OrderBy: map[string]OrderBy{"id": DESC}})
+		s.Require().NoError(err)
+		for i, u := range v {
+			s.T().Log(i, u)
+		}
+	})
+	s.Run("smart query", func() {
+		v, err := s.crud.SmartQuery(context.TODO(), Query{OrderBy: map[string]OrderBy{"created_at": ASC}})
+		s.Require().NoError(err)
+		for i, u := range v {
+			s.T().Log(i, u)
+		}
+	})
+	s.Run("smart query", func() {
+		v, err := s.crud.SmartQuery(context.TODO(), Query{OrderBy: map[string]OrderBy{"created_at": DESC}})
+		s.Require().NoError(err)
+		for i, u := range v {
+			s.T().Log(i, u)
+		}
+	})
+	s.Run("smart query", func() {
+		v, err := s.crud.SmartQuery(context.TODO(), Query{
+			OrderBy: map[string]OrderBy{"created_at": DESC},
+			Like:    map[string]string{"name": "test"},
+		})
+		s.Require().NoError(err)
+		for i, u := range v {
+			s.T().Log(i, u)
+		}
+	})
+	s.Run("smart query", func() {
+		v, err := s.crud.SmartQuery(context.TODO(), Query{
+			OrderBy: map[string]OrderBy{"created_at": DESC},
+			Like:    map[string]string{"name": "test"},
+			Equal:   map[string]any{"name": "test2"},
+		})
+		s.Require().NoError(err)
+		for i, u := range v {
+			s.T().Log(i, u)
+		}
+	})
+	s.Run("smart query", func() {
+		v, err := s.crud.SmartQuery(context.TODO(), Query{
+			OrderBy: map[string]OrderBy{"created_at": DESC},
+			Like:    map[string]string{"name": "test"},
+			Equal:   map[string]any{"name": "test2"},
+			Between: map[string]struct{ From, To any }{"created_at": {
+				From: time.Date(2023, 1, 23, 0, 0, 0, 0, time.Local),
+				To:   time.Date(2023, 1, 24, 0, 0, 0, 0, time.Local),
+			}},
+		})
+		s.Require().NoError(err)
+		for i, u := range v {
+			s.T().Log(i, u)
+		}
 	})
 }
 

@@ -23,7 +23,7 @@ type (
 
 	OrderBy uint
 	Between struct {
-		From, To any
+		From, To string
 	}
 
 	Query struct {

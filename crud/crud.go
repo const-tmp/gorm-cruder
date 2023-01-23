@@ -22,6 +22,9 @@ type (
 	}
 
 	OrderBy uint
+	Between struct {
+		From, To any
+	}
 
 	Query struct {
 		Omit    []string
@@ -29,9 +32,7 @@ type (
 		OrderBy map[string]OrderBy
 		Equal   map[string]any
 		Like    map[string]string
-		Between map[string]struct {
-			From, To any
-		}
+		Between map[string]Between
 	}
 )
 

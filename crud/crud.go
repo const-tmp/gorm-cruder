@@ -30,7 +30,7 @@ type (
 		Omit    []string
 		Preload []string
 		OrderBy map[string]OrderBy
-		Equal   map[string]any
+		Equal   map[string]string
 		Like    map[string]string
 		Between map[string]Between
 	}
